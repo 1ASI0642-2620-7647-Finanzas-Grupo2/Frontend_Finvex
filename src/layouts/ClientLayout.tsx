@@ -1,0 +1,4 @@
+import { LogOut, ReceiptText } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+export default function ClientLayout() { const navigate = useNavigate(); const clear = useAuthStore((s) => s.clearUser); return <div className="min-h-screen bg-slate-50"><header className="border-b bg-white"><div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-5"><b className="text-xl">finvex<span className="text-indigo-600">.</span></b><button onClick={() => { clear(); navigate('/login'); }} aria-label="Cerrar sesión"><LogOut className="h-5 w-5 text-slate-400" /></button></div></header><main className="mx-auto max-w-2xl px-5 py-6"><div className="mb-6 flex gap-2 text-sm font-semibold text-slate-500"><ReceiptText className="h-4 w-4 text-indigo-600" />Mi estado de cuenta</div><Outlet /></main></div>; }
