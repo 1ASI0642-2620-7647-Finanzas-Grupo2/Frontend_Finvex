@@ -5,3 +5,13 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input, select { font: inherit; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  :root, body { background: #fff; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-shadow: none !important; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+  [role='note'] { display: none !important; }
+}
