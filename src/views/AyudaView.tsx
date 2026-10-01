@@ -1,0 +1,22 @@
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { Card, PageHeader } from '../components/ui';
+const glosario: { termino: string; definicion: string; ejemplo?: string }[] = [
+  { termino: 'TEA (Tasa Efectiva Anual)', definicion: 'Tasa anual que ya incluye la capitalización de intereses. Es la que mejor refleja el costo real del crédito.', ejemplo: 'TEA 36 % equivale a una TEM de aproximadamente 2.60 %: (1 + 0.36)^(30/360) − 1.' },
+  { termino: 'TNA (Tasa Nominal Anual)', definicion: 'Tasa anual sin capitalización. Para obtener la tasa mensual se divide entre 360 y se multiplica por 30.', ejemplo: 'TNA 36 % equivale a una TEM de 3 %: 0.36 ÷ 360 × 30.' },
+  { termino: 'TEA vs Nominal', definicion: 'Con la misma cifra, la nominal resulta más cara porque al capitalizarse produce una tasa efectiva mayor. Al registrar un cliente eliges cuál de las dos estás ingresando y el sistema hace la conversión.' },
+  { termino: 'TEM (Tasa Efectiva Mensual)', definicion: 'Tasa que se aplica cada mes. El sistema la obtiene a partir de la TEA o la TNA usando año comercial de 360 días y mes de 30 días. Con ella se calcula la cuota fija.' },
+  { termino: 'Día de corte', definicion: 'Día del mes en que se cierra el ciclo de facturación. Las compras hechas hasta ese día forman parte del ciclo y aparecen en el listado de corte. Si el mes es más corto, se usa su último día.' },
+  { termino: 'Día de pago', definicion: 'Día del mes en que vence lo exigible del ciclo. Pagar a tiempo evita intereses moratorios.' },
+  { termino: 'Mora', definicion: 'Situación en la que el cliente no pagó en la fecha de vencimiento. Desde el día siguiente se cobra interés moratorio por cada día de atraso.' },
+  { termino: 'Tasa moratoria', definicion: 'Tasa anual adicional que se aplica solo sobre los días de atraso. Se ingresa en % igual que la compensatoria.' },
+  { termino: 'Interés compensatorio', definicion: 'Interés que paga el cliente por usar el dinero prestado, calculado por días desde la fecha de compra con la tasa compensatoria.' },
+  { termino: 'Fin de mes', definicion: 'Modalidad en la que la compra se paga completa en la siguiente fecha de pago, con su interés compensatorio.' },
+  { termino: 'Cuotas', definicion: 'Modalidad en la que la compra se divide en pagos mensuales de igual monto (método francés). El plazo no puede superar el máximo de meses del cliente.' },
+  { termino: 'Límite de crédito y crédito disponible', definicion: 'El límite es el capital máximo que el cliente puede deber. El disponible es el límite menos el capital pendiente; una compra que lo supere es rechazada.' },
+  { termino: 'Total exigible', definicion: 'Monto que el cliente debe pagar a la fecha: capital correspondiente, interés compensatorio e interés moratorio.' },
+  { termino: 'Pago exacto', definicion: 'El sistema solo acepta pagos por el total exigible a la fecha de pago. No hay pagos parciales ni excedentes; si el monto no coincide, se muestra el monto correcto.' },
+  { termino: 'Imputación', definicion: 'Orden en que se aplica el pago: primero al interés moratorio, luego al interés compensatorio y al final al capital.' },
+  { termino: 'Listado de corte', definicion: 'Resumen de un ciclo cerrado: compras del periodo con sus días e interés, cuotas que vencen en la fecha de pago e intereses por mora. El administrador puede generarlo y guardarlo una sola vez por corte.' },
+];
+export default function AyudaView() { const [q, setQ] = useState(''); const items = glosario.filter((g) => `${g.termino} ${g.definicion}`.toLowerCase().includes(q.toLowerCase())); return <div><PageHeader eyebrow="Ayuda" title="Glosario financiero" subtitle="Conceptos que usa Finvex para calcular tus créditos." /><div className="relative mb-6 max-w-sm"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar término" className="w-full rounded-xl border bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-indigo-500" /></div><Card><dl className="divide-y">{items.map((g) => <div key={g.termino} className="p-5"><dt className="font-bold text-slate-900">{g.termino}</dt><dd className="mt-1.5 text-sm leading-6 text-slate-600">{g.definicion}</dd>{g.ejemplo && <dd className="mt-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs text-indigo-800">{g.ejemplo}</dd>}</div>)}{!items.length && <p className="p-8 text-center text-sm text-slate-500">No encontramos ese término.</p>}</dl></Card></div>; }
