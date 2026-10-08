@@ -4,6 +4,7 @@ export type TipoTasa = 'Nominal' | 'Efectiva';
 export type Moneda = 'PEN' | 'USD';
 export type EstadoDeuda = 'Pendiente' | 'Pagada' | 'Mora';
 export type EstadoRegistro = 'Activo' | 'Inactivo';
+
 export interface AuthUser {
   token: string;
   role: Role;
@@ -13,10 +14,12 @@ export interface AuthUser {
   clienteId?: number | null;
   expiraEn?: string;
 }
+
 export interface LoginRequest {
   usuario: string;
   password: string;
 }
+
 export interface LoginResponse {
   token: string;
   rol: Role;
@@ -25,6 +28,7 @@ export interface LoginResponse {
   clienteId: number | null;
   expiraEn: string;
 }
+
 export interface Cuota {
   numero: number;
   vencimiento: string;
@@ -33,6 +37,7 @@ export interface Cuota {
   amortizacion: number;
   estado: EstadoDeuda;
 }
+
 export interface Compra {
   compraId: number;
   producto: string;
@@ -43,13 +48,17 @@ export interface Compra {
   estado: EstadoDeuda;
   cuotas?: Cuota[] | null;
 }
+
 export interface EstadoCuenta {
   clienteId: number;
   moneda: Moneda;
   fechaCorte: string;
   totalExigible: number;
+  fechaProximoPago?: string | null;
+  exigibleHoy?: number;
   compras: Compra[];
 }
+
 export interface Cliente {
   clienteId: number;
   dni: string;
@@ -58,6 +67,7 @@ export interface Cliente {
   estado: EstadoRegistro | string;
   deudaActual: number;
 }
+
 export interface ClienteDetalle extends Cliente {
   usuario: string;
   creditoDisponible: number;
@@ -70,6 +80,7 @@ export interface ClienteDetalle extends Cliente {
   maxMeses: number;
   horaCorte: string;
 }
+
 export interface RegisterAdminRequest {
   ruc: string;
   razonSocial: string;
@@ -77,11 +88,13 @@ export interface RegisterAdminRequest {
   usuario: string;
   password: string;
 }
+
 export interface RegistroResponse {
   id: number;
   usuario: string;
   mensaje: string;
 }
+
 export interface ClienteRequest {
   dni: string;
   nombres: string;
@@ -97,7 +110,9 @@ export interface ClienteRequest {
   maxMeses?: number;
   horaCorte?: string;
 }
+
 export type ClienteUpdateRequest = Omit<ClienteRequest, 'usuario' | 'password'> & { password?: string };
+
 export interface CompraRequest {
   producto: string;
   precioCredito: number;
@@ -107,6 +122,7 @@ export interface CompraRequest {
   productoId?: number;
   cantidad?: number;
 }
+
 export interface CompraResponse {
   id: number;
   producto: string;
@@ -114,20 +130,24 @@ export interface CompraResponse {
   modalidad: ModalidadCompra;
   estado: EstadoDeuda;
 }
+
 export interface PagoRequest {
   monto: number;
   fechaPago?: string;
 }
+
 export interface PagoResponse {
   monto: number;
   imputacionMora: number;
   imputacionInteres: number;
   imputacionCapital: number;
 }
+
 export interface PagoHistorial extends PagoResponse {
   id: number;
   fechaPago: string;
 }
+
 export interface Producto {
   id: number;
   proveedor: string | null;
@@ -141,6 +161,7 @@ export interface Producto {
   permiteCuotas: boolean;
   activo: boolean;
 }
+
 export interface ProductoRequest {
   marca: string;
   descripcion: string;
@@ -151,6 +172,7 @@ export interface ProductoRequest {
   permiteCuotas: boolean;
   proveedor?: string;
 }
+
 export type TipoItemListado = 'Compra' | 'Cuota' | 'InteresMora';
 export interface ItemListadoPago {
   tipo: TipoItemListado;
@@ -163,6 +185,7 @@ export interface ItemListadoPago {
   interesCompensatorio: number;
   monto: number;
 }
+
 export interface ListadoPago {
   clienteId: number;
   fechaCorte: string;
@@ -173,6 +196,7 @@ export interface ListadoPago {
   listadoPagoId?: number | null;
   fechaGeneracionUtc?: string | null;
 }
+
 export interface Tienda {
   id: number;
   ruc: string;
@@ -182,9 +206,11 @@ export interface Tienda {
   activo: boolean;
   estado: string;
 }
+
 export type TiendaRequest = RegisterAdminRequest;
 export const ACCIONES_AUDITORIA = ['LoginCorrecto', 'LoginFallido', 'Alta', 'Edicion', 'Baja', 'Reactivacion', 'Compra', 'Pago'] as const;
 export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number];
+
 export interface Operacion {
   id: number;
   tiendaId?: number | null;
@@ -197,6 +223,7 @@ export interface Operacion {
   fechaUtc: string;
   fechaLima: string;
 }
+
 export interface Pagina<T> {
   items: T[];
   pagina: number;
