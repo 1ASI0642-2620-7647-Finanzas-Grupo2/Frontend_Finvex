@@ -19,3 +19,37 @@ a:focus-visible { outline: 3px solid #c7d2fe; outline-offset: 2px; }
   tfoot { display: table-footer-group; }
   [role='note'] { display: none !important; }
 }
+
+/* Shared visual rhythm for the credit workspace. */
+:root { font-variant-numeric: lining-nums; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible { outline: 2px solid #6366f1; outline-offset: 3px; }
+.finvex-panel { background: radial-gradient(ellipse at 95% 0%, #eef2ff 0, transparent 38%), #f8fafc; }
+.finvex-panel > aside { box-shadow: 8px 0 30px -24px rgb(15 23 42 / .2); }
+.finvex-panel > main > header { background: rgb(255 255 255 / .94); }
+.metric-card { position: relative; overflow: hidden; }
+.metric-card::before { content: ''; display: block; width: 26px; height: 3px; border-radius: 999px; background: #c7d2fe; margin-bottom: 16px; }
+.metric-card:has(.text-emerald-600) { background: linear-gradient(135deg, #fff, #ecfdf5); border-color: #a7f3d0; }
+.metric-card:has(.text-emerald-600)::before { background: #10b981; }
+.metric-card:has(.text-rose-600)::before { background: #f43f5e; }
+.account-total { box-shadow: 0 12px 28px -18px rgb(30 27 75 / .5); }
+.finvex-panel article { transition: border-color 160ms ease, box-shadow 160ms ease; }
+.finvex-panel article:hover { border-color: #c7d2fe; }
+.finvex-panel article > .aspect-\[4\/3\] { background: linear-gradient(140deg, #eef2ff, #f1f5f9); }
+input[type='date'], input[type='datetime-local'], input[type='time'] { min-width: 0; }
+@media (max-width: 639px) {
+  .client-heading h1 { line-height: 1.35; }
+  .client-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .metric-card { padding: 14px; }
+  .metric-card p:first-of-type { font-size: 11px; }
+  .metric-card p:last-of-type { font-size: 18px; overflow-wrap: anywhere; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+@media print {
+  .finvex-panel { background: white; }
+  .schedule > .md\:hidden { display: none; }
+  .schedule > .md\:block { display: block; max-height: none; overflow: visible; }
+  .schedule thead { position: static; }
+}
