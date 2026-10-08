@@ -5,13 +5,248 @@ import toast from 'react-hot-toast';
 import { api } from '../api/axios';
 import { Badge, Button, Card, Empty, ErrorState, HelpTip, Input, Loading, PageHeader, type Tone } from '../components/ui';
 import { useAuthStore } from '../store/authStore';
-import type { ClienteDetalle, ListadoPago, Moneda, TipoItemListado } from '../types';
+import type { ClienteDetalle, EstadoCuenta, ListadoPago, Moneda, TipoItemListado } from '../types';
 import { getErrorMessage } from '../utils/errors';
 import { dateKey, formatCurrency, formatDate, formatDateTime } from '../utils/format';
 import { HELP } from '../utils/help';
-const tipos: Record<TipoItemListado, [Tone, string]> = { Compra: ['info', 'Compra'], Cuota: ['warning', 'Cuota'], InteresMora: ['danger', 'Interés por mora'] };
+const tipos: Record<TipoItemListado, [Tone, string]> = {
+  Compra: ['info', 'Compra'],
+  Cuota: ['warning', 'Cuota'],
+  InteresMora: ['danger', 'Interés por mora'],
+};
 const asUtc = (value: string) => (/(Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`);
-const csvCell = (value: string | number) => { const text = String(value); return /[";,\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; };
-const exportCsv = (listado: ListadoPago, nombre: string) => { const rows: (string | number)[][] = [['Tipo', 'Compra', 'N.º cuota', 'Descripción', 'Fecha', 'Capital', 'Días', 'Interés compensatorio', 'Monto'], ...listado.items.map((i) => [tipos[i.tipo]?.[1] ?? i.tipo, i.compraId ?? '', i.nroCuota ?? '', i.descripcion, dateKey(i.fecha), i.capital.toFixed(2), i.dias, i.interesCompensatorio.toFixed(2), i.monto.toFixed(2)]), ['', '', '', 'Total', '', '', '', '', listado.total.toFixed(2)]]; const csv = '﻿' + 'sep=;\r\n' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n'); const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = `listado-corte-${nombre}-${dateKey(listado.fechaCorte)}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); };
-export default function ListadoCorteView() { const params = useParams(); const user = useAuthStore((s) => s.user); const isAdmin = user?.role === 'Admin'; const clienteId = isAdmin ? params.clienteId : user?.clienteId != null ? String(user.clienteId) : undefined; const [fecha, setFecha] = useState(''); const [listado, setListado] = useState<ListadoPago | null>(null); const [cliente, setCliente] = useState<ClienteDetalle | null>(null); const [loading, setLoading] = useState(true); const [generating, setGenerating] = useState(false); const [error, setError] = useState(''); const moneda: Moneda | undefined = cliente?.moneda; const consultar = useCallback(async (fechaCorte: string) => { if (!clienteId) { setError('No se encontró el cliente.'); setLoading(false); return; } setLoading(true); setError(''); try { const { data } = await api.get<ListadoPago>(`/api/clientes/${clienteId}/listado-pago`, { params: fechaCorte ? { fechaCorte } : undefined }); setListado(data); } catch (err) { setListado(null); setError(getErrorMessage(err, 'No pudimos obtener el listado de corte.')); } finally { setLoading(false); } }, [clienteId]); useEffect(() => { void consultar(''); if (isAdmin && clienteId) api.get<ClienteDetalle>(`/api/clientes/${clienteId}`).then(({ data }) => setCliente(data)).catch(() => setCliente(null)); }, [consultar, isAdmin, clienteId]); const submit = (e: FormEvent) => { e.preventDefault(); void consultar(fecha); }; const generar = async () => { setGenerating(true); try { const target = fecha || (listado ? dateKey(listado.fechaCorte) : ''); const res = await api.post<ListadoPago>(`/api/clientes/${clienteId}/listado-pago/generar`, null, { params: target ? { fechaCorte: target } : undefined }); setListado(res.data); setError(''); toast.success(res.status === 201 ? 'Listado generado y guardado' : 'El listado ya estaba generado; se muestra el guardado'); } catch (err) { toast.error(getErrorMessage(err, 'No pudimos generar el listado.')); } finally { setGenerating(false); } }; const totales = listado?.items.reduce((acc, i) => ({ capital: acc.capital + i.capital, interes: acc.interes + i.interesCompensatorio }), { capital: 0, interes: 0 }); const nombre = cliente?.nombres ?? (clienteId ? `cliente-${clienteId}` : 'cliente'); return <div>{isAdmin && <Link to={`/admin/clientes/${clienteId}`} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 print:hidden"><ArrowLeft className="h-4 w-4" />Volver al cliente</Link>}<PageHeader eyebrow="Listado de corte" title={cliente ? cliente.nombres : 'Listado de pago del ciclo'} subtitle={<span className="flex items-center gap-1.5">{cliente ? `DNI ${cliente.dni} · ` : ''}Compras del ciclo, cuotas que vencen e intereses por mora.<HelpTip text={HELP.listadoCorte} /></span>} actions={listado && <><Button variant="secondary" onClick={() => window.print()}><Printer className="h-4 w-4" />Imprimir</Button><Button variant="secondary" onClick={() => exportCsv(listado, nombre.replace(/\s+/g, '-').toLowerCase())}><Download className="h-4 w-4" />Exportar CSV</Button></>} /><form onSubmit={submit} className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end print:hidden"><div className="sm:w-64"><Input label="Fecha de corte" help="Cualquier fecha se asocia al corte de su ciclo. Déjala vacía para ver el último corte cerrado." type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div><Button type="submit" variant="secondary" loading={loading}><Search className="h-4 w-4" />Consultar</Button>{isAdmin && <Button type="button" loading={generating} onClick={() => void generar()}><FilePlus2 className="h-4 w-4" />Generar</Button>}</form>{loading ? <Loading text="Calculando listado..." /> : error ? <ErrorState message={error} onRetry={() => void consultar(fecha)} /> : listado && <><div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Info label="Fecha de corte" help={HELP.fechaCorte} value={formatDate(listado.fechaCorte)} /><Info label="Fecha de pago" help={HELP.diaPago} value={formatDate(listado.fechaPago)} /><Info label="Calculado al" value={formatDate(listado.fechaCalculo)} /><Info label="Total del listado" value={formatCurrency(listado.total, moneda)} strong /></div><p className="mb-4 text-sm">{listado.listadoPagoId ? <Badge tone="success">Guardado #{listado.listadoPagoId}{listado.fechaGeneracionUtc ? ` el ${formatDateTime(asUtc(listado.fechaGeneracionUtc))}` : ''}</Badge> : <Badge tone="neutral">Vista calculada, aún no guardada</Badge>}</p><Card>{listado.items.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Descripción</th><th className="px-4 py-3">Fecha</th><th className="px-4 py-3 text-right">Capital</th><th className="px-4 py-3 text-right">Días</th><th className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1">Interés comp.<HelpTip text={HELP.interesCompensatorio} /></span></th><th className="px-4 py-3 text-right">Monto</th></tr></thead><tbody className="divide-y">{listado.items.map((i, idx) => <tr key={`${i.tipo}-${i.compraId ?? ''}-${i.nroCuota ?? ''}-${idx}`} className={i.tipo === 'InteresMora' ? 'bg-rose-50/60' : ''}><td className="px-4 py-3"><Badge tone={tipos[i.tipo]?.[0] ?? 'neutral'}>{tipos[i.tipo]?.[1] ?? i.tipo}</Badge></td><td className="px-4 py-3">{i.descripcion}{i.nroCuota ? <span className="text-slate-500"> · cuota {i.nroCuota}</span> : null}</td><td className="px-4 py-3 whitespace-nowrap">{formatDate(i.fecha)}</td><td className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.capital, moneda)}</td><td className="px-4 py-3 text-right tabular-nums">{i.dias}</td><td className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.interesCompensatorio, moneda)}</td><td className="px-4 py-3 text-right font-bold tabular-nums">{formatCurrency(i.monto, moneda)}</td></tr>)}</tbody><tfoot className="border-t-2 bg-slate-50 font-bold"><tr><td className="px-4 py-3" colSpan={3}>Total</td><td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totales?.capital ?? 0, moneda)}</td><td /><td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totales?.interes ?? 0, moneda)}</td><td className="px-4 py-3 text-right tabular-nums">{formatCurrency(listado.total, moneda)}</td></tr></tfoot></table></div> : <Empty text="No hay movimientos en este ciclo." />}</Card></>}</div>; }
-function Info({ label, value, help, strong }: { label: string; value: string; help?: string; strong?: boolean }) { return <div className={`rounded-2xl border p-4 ${strong ? 'bg-slate-950 text-white' : 'bg-white'}`}><p className={`flex items-center gap-1.5 text-xs ${strong ? 'text-slate-400' : 'text-slate-500'}`}>{label}{help && <span className="print:hidden"><HelpTip text={help} /></span>}</p><p className="mt-1 text-lg font-black tabular-nums">{value}</p></div>; }
+const csvCell = (value: string | number) => {
+  const text = String(value);
+  return /[";,\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+const exportCsv = (listado: ListadoPago, nombre: string) => {
+  const rows: (string | number)[][] = [['Tipo', 'Compra', 'N.º cuota', 'Descripción', 'Fecha', 'Capital', 'Días', 'Interés compensatorio', 'Monto'], ...listado.items.map((i) => [tipos[i.tipo]?.[1] ?? i.tipo, i.compraId ?? '', i.nroCuota ?? '', i.descripcion, dateKey(i.fecha), i.capital.toFixed(2), i.dias, i.interesCompensatorio.toFixed(2), i.monto.toFixed(2)]), ['', '', '', 'Total', '', '', '', '', listado.total.toFixed(2)]];
+  const csv = '﻿' + 'sep=;\r\n' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `listado-corte-${nombre}-${dateKey(listado.fechaCorte)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+export default function ListadoCorteView() {
+  const params = useParams();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'Admin';
+  const clienteId = isAdmin ? params.clienteId : user?.clienteId != null ? String(user.clienteId) : undefined;
+  const [fecha, setFecha] = useState('');
+  const [listado, setListado] = useState<ListadoPago | null>(null);
+  const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
+  const [monedaCliente, setMonedaCliente] = useState<Moneda>();
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState('');
+  const moneda: Moneda | undefined = cliente?.moneda ?? monedaCliente;
+  const consultar = useCallback(
+    async (fechaCorte: string) => {
+      if (!clienteId) {
+        setError('No se encontró el cliente.');
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        const { data } = await api.get<ListadoPago>(`/api/clientes/${clienteId}/listado-pago`, { params: fechaCorte ? { fechaCorte } : undefined });
+        setListado(data);
+      } catch (err) {
+        setListado(null);
+        setError(getErrorMessage(err, 'No pudimos obtener el listado de corte.'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clienteId],
+  );
+  useEffect(() => {
+    void consultar('');
+    if (isAdmin && clienteId)
+      api
+        .get<ClienteDetalle>(`/api/clientes/${clienteId}`)
+        .then(({ data }) => setCliente(data))
+        .catch(() => setCliente(null));
+    if (!isAdmin && clienteId)
+      api
+        .get<EstadoCuenta>(`/api/clientes/${clienteId}/estado-cuenta`)
+        .then(({ data }) => setMonedaCliente(data.moneda))
+        .catch(() => setMonedaCliente(undefined));
+  }, [consultar, isAdmin, clienteId]);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    void consultar(fecha);
+  };
+  const generar = async () => {
+    setGenerating(true);
+    try {
+      const target = fecha || (listado ? dateKey(listado.fechaCorte) : '');
+      const res = await api.post<ListadoPago>(`/api/clientes/${clienteId}/listado-pago/generar`, null, { params: target ? { fechaCorte: target } : undefined });
+      setListado(res.data);
+      setError('');
+      toast.success(res.status === 201 ? 'Listado generado y guardado' : 'El listado ya estaba generado; se muestra el guardado');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'No pudimos generar el listado.'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+  const totales = listado?.items.reduce(
+    (acc, i) => ({
+      capital: acc.capital + i.capital,
+      interes: acc.interes + i.interesCompensatorio,
+    }),
+    { capital: 0, interes: 0 },
+  );
+  const nombre = cliente?.nombres ?? (clienteId ? `cliente-${clienteId}` : 'cliente');
+  return (
+    <div>
+      {isAdmin && (
+        <Link to={`/admin/clientes/${clienteId}`} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 print:hidden">
+          <ArrowLeft className="h-4 w-4" />
+          Volver al cliente
+        </Link>
+      )}
+      <PageHeader
+        eyebrow="Listado de corte"
+        title={cliente ? cliente.nombres : 'Listado de pago del ciclo'}
+        subtitle={
+          <span className="flex items-center gap-1.5">
+            {cliente ? `DNI ${cliente.dni} · ` : ''}Compras del ciclo, cuotas que vencen e intereses por mora.
+            <HelpTip text={HELP.listadoCorte} />
+          </span>
+        }
+        actions={
+          listado && (
+            <>
+              <Button variant="secondary" onClick={() => window.print()}>
+                <Printer className="h-4 w-4" />
+                Imprimir
+              </Button>
+              <Button variant="secondary" onClick={() => exportCsv(listado, nombre.replace(/\s+/g, '-').toLowerCase())}>
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </Button>
+            </>
+          )
+        }
+      />
+      <form onSubmit={submit} className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end print:hidden">
+        <div className="sm:w-64">
+          <Input label="Fecha de corte" help="Cualquier fecha se asocia al corte de su ciclo. Déjala vacía para ver el último corte cerrado." type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        </div>
+        <Button type="submit" variant="secondary" loading={loading}>
+          <Search className="h-4 w-4" />
+          Consultar
+        </Button>
+        {isAdmin && (
+          <Button type="button" loading={generating} onClick={() => void generar()}>
+            <FilePlus2 className="h-4 w-4" />
+            Generar
+          </Button>
+        )}
+      </form>
+      {loading ? (
+        <Loading text="Calculando listado..." />
+      ) : error ? (
+        <ErrorState message={error} onRetry={() => void consultar(fecha)} />
+      ) : (
+        listado && (
+          <>
+            <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Info label="Fecha de corte" help={HELP.fechaCorte} value={formatDate(listado.fechaCorte)} />
+              <Info label="Fecha de pago" help={HELP.diaPago} value={formatDate(listado.fechaPago)} />
+              <Info label="Calculado al" value={formatDate(listado.fechaCalculo)} />
+              <Info label="Total del listado" value={formatCurrency(listado.total, moneda)} strong />
+            </div>
+            <p className="mb-4 text-sm">
+              {listado.listadoPagoId ? (
+                <Badge tone="success">
+                  Guardado #{listado.listadoPagoId}
+                  {listado.fechaGeneracionUtc ? ` el ${formatDateTime(asUtc(listado.fechaGeneracionUtc))}` : ''}
+                </Badge>
+              ) : (
+                <Badge tone="neutral">Vista calculada, aún no guardada</Badge>
+              )}
+            </p>
+            <Card>
+              {listado.items.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3">Tipo</th>
+                        <th className="px-4 py-3">Descripción</th>
+                        <th className="px-4 py-3">Fecha</th>
+                        <th className="px-4 py-3 text-right">Capital</th>
+                        <th className="px-4 py-3 text-right">Días</th>
+                        <th className="px-4 py-3 text-right">
+                          <span className="inline-flex items-center gap-1">
+                            Interés comp.
+                            <HelpTip text={HELP.interesCompensatorio} />
+                          </span>
+                        </th>
+                        <th className="px-4 py-3 text-right">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {listado.items.map((i, idx) => (
+                        <tr key={`${i.tipo}-${i.compraId ?? ''}-${i.nroCuota ?? ''}-${idx}`} className={i.tipo === 'InteresMora' ? 'bg-rose-50/60' : ''}>
+                          <td className="px-4 py-3">
+                            <Badge tone={tipos[i.tipo]?.[0] ?? 'neutral'}>{tipos[i.tipo]?.[1] ?? i.tipo}</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            {i.descripcion}
+                            {i.nroCuota ? <span className="text-slate-500"> · cuota {i.nroCuota}</span> : null}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">{formatDate(i.fecha)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.capital, moneda)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">{i.dias}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.interesCompensatorio, moneda)}</td>
+                          <td className="px-4 py-3 text-right font-bold tabular-nums">{formatCurrency(i.monto, moneda)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="border-t-2 bg-slate-50 font-bold">
+                      <tr>
+                        <td className="px-4 py-3" colSpan={3}>
+                          Total
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totales?.capital ?? 0, moneda)}</td>
+                        <td />
+                        <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totales?.interes ?? 0, moneda)}</td>
+                        <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(listado.total, moneda)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <Empty text="No hay movimientos en este ciclo." />
+              )}
+            </Card>
+          </>
+        )
+      )}
+    </div>
+  );
+}
+function Info({ label, value, help, strong }: { label: string; value: string; help?: string; strong?: boolean }) {
+  return (
+    <div className={`rounded-2xl border p-4 ${strong ? 'bg-slate-950 text-white' : 'bg-white'}`}>
+      <p className={`flex items-center gap-1.5 text-xs ${strong ? 'text-slate-400' : 'text-slate-500'}`}>
+        {label}
+        {help && (
+          <span className="print:hidden">
+            <HelpTip text={help} />
+          </span>
+        )}
+      </p>
+      <p className="mt-1 text-lg font-black tabular-nums">{value}</p>
+    </div>
+  );
+}
