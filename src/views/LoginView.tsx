@@ -3,6 +3,7 @@ import { ArrowRight, LockKeyhole, ServerCog, ShieldCheck, Store, UserRound } fro
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../api/axios';
+import BrandLogo from '../components/BrandLogo';
 import { Button, Input } from '../components/ui';
 import { homeFor, useAuthStore } from '../store/authStore';
 import type { LoginRequest, LoginResponse, Role } from '../types';
@@ -76,10 +77,7 @@ export default function LoginView() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <section className="hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500 font-black">F</div>
-          <b className="text-xl">finvex</b>
-        </div>
+        <BrandLogo className="h-24 w-40" priority />
         <div>
           <p className="mb-5 text-sm font-bold uppercase tracking-[.25em] text-indigo-300">Crédito que mueve negocios</p>
           <h1 className="text-6xl font-black leading-none">
@@ -100,13 +98,9 @@ export default function LoginView() {
           </span>
         </div>
       </section>
-      <section className="flex items-center justify-center bg-slate-50 p-5">
+      <section className="flex min-w-0 items-center justify-center bg-slate-50 px-3 py-6 sm:p-5">
         <div className="w-full max-w-md">
-          <div className="mb-10 lg:hidden">
-            <b className="text-2xl">
-              finvex<span className="text-indigo-600">.</span>
-            </b>
-          </div>
+          <BrandLogo className="mb-6 h-20 w-32 lg:hidden" priority />
           <p className="text-sm font-bold uppercase tracking-widest text-indigo-600">Bienvenido de vuelta</p>
           <h2 className="mt-2 text-3xl font-black">Entra a tu espacio</h2>
           <p className="mt-2 text-slate-500">Consulta y gestiona tus créditos.</p>
@@ -119,7 +113,8 @@ export default function LoginView() {
                   setRole(r.value);
                   setError('');
                 }}
-                className={`flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold ${role === r.value ? 'bg-white shadow-sm' : 'text-slate-500'}`}>
+                aria-pressed={role === r.value}
+                className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200 min-[375px]:flex-row min-[375px]:gap-2 min-[375px]:text-sm ${role === r.value ? 'bg-white shadow-sm' : 'text-slate-500'}`}>
                 {r.icon}
                 {r.label}
               </button>
