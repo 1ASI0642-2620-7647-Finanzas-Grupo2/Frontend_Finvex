@@ -7,6 +7,7 @@ import type { ClienteDetalle, CompraRequest, CompraResponse, ModalidadCompra, Pr
 import { getErrorMessage } from '../utils/errors';
 import { formatCurrency, round2, toApiDateTime } from '../utils/format';
 import { HELP } from '../utils/help';
+import { FIELD_LIMITS, hasTrimmedLength } from '../utils/validation';
 type Modo = 'catalogo' | 'manual';
 export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: ClienteDetalle; onSaved: (compra: CompraResponse) => void; onCancel: () => void }) {
   const [modo, setModo] = useState<Modo>('catalogo');
@@ -49,7 +50,7 @@ export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: Cl
     e.preventDefault();
     setError('');
     const meses = modalidad === 'FinDeMes' ? 1 : Number(plazo);
-    const invalid = cliente.estado !== 'Activo' ? 'El cliente está inactivo y no puede comprar.' : modo === 'catalogo' && !seleccionado ? 'Selecciona un producto del catálogo.' : modo === 'catalogo' && (!Number.isInteger(Number(cantidad)) || Number(cantidad) < 1) ? 'La cantidad debe ser un número entero mayor que cero.' : modo === 'manual' && !producto.trim() ? 'Describe el producto o servicio.' : !(total > 0) ? 'El precio debe ser mayor que cero.' : excede ? 'El total supera el crédito disponible del cliente.' : !Number.isInteger(meses) || meses < 1 ? 'Ingresa un plazo válido.' : meses > cliente.maxMeses ? `El plazo no puede superar ${cliente.maxMeses} meses.` : !modalidades.includes(modalidad) ? 'El producto no permite esa modalidad.' : '';
+    const invalid = cliente.estado !== 'Activo' ? 'El cliente está inactivo y no puede comprar.' : modo === 'catalogo' && !seleccionado ? 'Selecciona un producto del catálogo.' : modo === 'catalogo' && (!Number.isInteger(Number(cantidad)) || Number(cantidad) < 1) ? 'La cantidad debe ser un número entero mayor que cero.' : modo === 'manual' && !hasTrimmedLength(producto, FIELD_LIMITS.productDescriptionMin, FIELD_LIMITS.productDescriptionMax) ? `La descripción debe tener entre ${FIELD_LIMITS.productDescriptionMin} y ${FIELD_LIMITS.productDescriptionMax} caracteres.` : !(total > 0) ? 'El precio debe ser mayor que cero.' : excede ? 'El total supera el crédito disponible del cliente.' : !Number.isInteger(meses) || meses < 1 ? 'Ingresa un plazo válido.' : meses > cliente.maxMeses ? `El plazo no puede superar ${cliente.maxMeses} meses.` : !modalidades.includes(modalidad) ? 'El producto no permite esa modalidad.' : '';
     if (invalid) {
       setError(invalid);
       return;
@@ -145,7 +146,7 @@ export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: Cl
       ) : (
         <>
           {productosError && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{productosError}</p>}
-          <Input label="Producto o servicio" value={producto} onChange={(e) => setProducto(e.target.value)} required />
+          <Input label="Producto o servicio" help={HELP.productoManual} value={producto} onChange={(e) => setProducto(e.target.value)} minLength={FIELD_LIMITS.productDescriptionMin} maxLength={FIELD_LIMITS.productDescriptionMax} required />
           <Input label="Precio a crédito" help={HELP.precioCredito} type="number" min="0.01" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} required />
         </>
       )}

@@ -7,6 +7,7 @@ import { Button, Input } from '../components/ui';
 import { homeFor, useAuthStore } from '../store/authStore';
 import type { LoginRequest, LoginResponse, Role } from '../types';
 import { getErrorMessage } from '../utils/errors';
+import { HELP } from '../utils/help';
 const endpoints: Record<Role, string> = {
   Admin: '/api/auth/login/admin',
   Cliente: '/api/auth/login/cliente',
@@ -34,7 +35,6 @@ export default function LoginView() {
   const [role, setRole] = useState<Role>(isRole(initialRole) ? initialRole : 'Admin');
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
-  const [tiendaRuc, setTiendaRuc] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -45,17 +45,12 @@ export default function LoginView() {
   }, [params]);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (role === 'Cliente' && !/^\d{11}$/.test(tiendaRuc)) {
-      setError('Ingresa el RUC de 11 dígitos de la tienda.');
-      return;
-    }
     setLoading(true);
     setError('');
     try {
       const { data } = await api.post<LoginResponse>(endpoints[role], {
         usuario: usuario.trim(),
         password,
-        tiendaRuc: role === 'Cliente' ? tiendaRuc : undefined,
       } satisfies LoginRequest);
       if (!data?.token) throw new Error('La respuesta no contiene un token.');
       const rol = isRole(data.rol) ? data.rol : role;
@@ -131,9 +126,8 @@ export default function LoginView() {
             ))}
           </div>
           <form onSubmit={submit} className="space-y-5">
-            {role === 'Cliente' && <Input label="RUC de la tienda" help="Identifica el comercio al que pertenece tu cuenta." value={tiendaRuc} onChange={(e) => setTiendaRuc(e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" pattern="\d{11}" required />}
-            <Input label="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" required />
-            <Input label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+            <Input label="Usuario" help={HELP.usuarioLogin} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" required />
+            <Input label="Contraseña" help={HELP.passwordLogin} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
             {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
             <Button type="submit" loading={loading} className="w-full">
               Entrar <ArrowRight className="h-4 w-4" />

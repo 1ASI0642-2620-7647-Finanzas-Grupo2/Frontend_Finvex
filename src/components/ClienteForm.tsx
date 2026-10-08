@@ -6,6 +6,7 @@ import type { ClienteDetalle, ClienteRequest, ClienteUpdateRequest, Moneda, Regi
 import { getErrorMessage } from '../utils/errors';
 import { fromPercent, round2, toPercent, toTimeSpan } from '../utils/format';
 import { HELP } from '../utils/help';
+import { FIELD_LIMITS, hasTrimmedLength } from '../utils/validation';
 type FormState = {
   dni: string;
   nombres: string;
@@ -48,7 +49,7 @@ const initialState = (c?: ClienteDetalle): FormState =>
         diaCorte: '20',
         diaPago: '26',
         moneda: 'PEN',
-        maxMeses: '12',
+        maxMeses: '1',
         horaCorte: '23:59:59',
         usuario: '',
         password: '',
@@ -59,7 +60,7 @@ const validate = (f: FormState, editing: boolean): string => {
   const compensatoria = Number(f.tasaCompensatoria);
   const moratoria = Number(f.tasaMoratoria);
   if (!/^\d{8}$/.test(f.dni)) return 'El DNI debe tener 8 dígitos.';
-  if (!f.nombres.trim()) return 'Ingresa los nombres del cliente.';
+  if (!hasTrimmedLength(f.nombres, FIELD_LIMITS.nameMin, FIELD_LIMITS.nameMax)) return `Los nombres completos deben tener entre ${FIELD_LIMITS.nameMin} y ${FIELD_LIMITS.nameMax} caracteres.`;
   if (f.limiteCredito === '' || !Number.isFinite(limite) || limite < 0) return 'El límite de crédito no puede ser negativo.';
   if (f.tasaCompensatoria === '' || !Number.isFinite(compensatoria) || compensatoria <= 0) return 'La tasa compensatoria debe ser mayor que cero.';
   if (f.tasaMoratoria === '' || !Number.isFinite(moratoria) || moratoria < 0) return 'La tasa moratoria no puede ser negativa.';
@@ -67,8 +68,8 @@ const validate = (f: FormState, editing: boolean): string => {
   if (!isDay(f.diaPago)) return 'El día de pago debe ser un número entero entre 1 y 28.';
   const meses = Number(f.maxMeses);
   if (!Number.isInteger(meses) || meses < 1 || meses > 36) return 'El plazo máximo debe estar entre 1 y 36 meses.';
-  if (!editing && !f.usuario.trim()) return 'Ingresa el usuario del cliente.';
-  if ((!editing || f.password) && f.password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+  if (!editing && !hasTrimmedLength(f.usuario, FIELD_LIMITS.usernameMin, FIELD_LIMITS.usernameMax)) return `El usuario debe tener entre ${FIELD_LIMITS.usernameMin} y ${FIELD_LIMITS.usernameMax} caracteres.`;
+  if ((!editing || f.password) && f.password.length < FIELD_LIMITS.passwordMin) return `La contraseña debe tener al menos ${FIELD_LIMITS.passwordMin} caracteres.`;
   return '';
 };
 export default function ClienteForm({ cliente, onSaved, onCancel }: { cliente?: ClienteDetalle; onSaved: (detalle?: ClienteDetalle) => void; onCancel?: () => void }) {
@@ -125,7 +126,7 @@ export default function ClienteForm({ cliente, onSaved, onCancel }: { cliente?: 
   return (
     <form onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
       <Input label="DNI" help={HELP.dni} value={form.dni} onChange={set('dni')} inputMode="numeric" pattern="\d{8}" required />
-      <Input label="Nombres completos" value={form.nombres} onChange={set('nombres')} required />
+      <Input label="Nombres completos" help={HELP.nombresCliente} value={form.nombres} onChange={set('nombres')} minLength={FIELD_LIMITS.nameMin} maxLength={FIELD_LIMITS.nameMax} required />
       <Select label="Moneda" help={HELP.moneda} value={form.moneda} onChange={set('moneda')}>
         <option value="PEN">Soles (S/)</option>
         <option value="USD">Dólares (US$)</option>
@@ -142,8 +143,8 @@ export default function ClienteForm({ cliente, onSaved, onCancel }: { cliente?: 
       <Input label="Día de pago" help={HELP.diaPago} type="number" min="1" max="28" step="1" value={form.diaPago} onChange={set('diaPago')} required />
       <Input label="Plazo máximo (meses)" help={HELP.maxMeses} type="number" min="1" max="36" step="1" value={form.maxMeses} onChange={set('maxMeses')} required />
       <Input label="Hora de corte" help={HELP.horaCorte} type="time" step="1" value={form.horaCorte} onChange={set('horaCorte')} />
-      <Input label="Usuario cliente" help={HELP.usuarioCliente} value={form.usuario} onChange={set('usuario')} disabled={editing} autoComplete="off" required={!editing} />
-      <Input label={editing ? 'Nueva contraseña' : 'Contraseña'} help={editing ? HELP.passwordEdicion : HELP.password} type="password" value={form.password} onChange={set('password')} autoComplete="new-password" minLength={6} required={!editing} />
+      <Input label="Usuario cliente" help={HELP.usuarioCliente} value={form.usuario} onChange={set('usuario')} disabled={editing} autoComplete="off" minLength={FIELD_LIMITS.usernameMin} maxLength={FIELD_LIMITS.usernameMax} required={!editing} />
+      <Input label={editing ? 'Nueva contraseña' : 'Contraseña'} help={editing ? HELP.passwordEdicion : HELP.password} type="password" value={form.password} onChange={set('password')} autoComplete="new-password" minLength={FIELD_LIMITS.passwordMin} required={!editing} />
       {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 sm:col-span-2">{error}</p>}
       <div className="flex gap-3 sm:col-span-2">
         {onCancel && (

@@ -16,7 +16,6 @@ export interface AuthUser {
 export interface LoginRequest {
   usuario: string;
   password: string;
-  tiendaRuc?: string;
 }
 export interface LoginResponse {
   token: string;

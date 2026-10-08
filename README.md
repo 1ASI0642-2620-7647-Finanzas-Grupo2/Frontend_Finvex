@@ -43,7 +43,7 @@ El proyecto no incorpora actualmente un runner de pruebas frontend. La verificac
 | `Admin` | `POST /api/auth/login/admin` | `/admin` |
 | `Cliente` | `POST /api/auth/login/cliente` | `/cliente/estado-cuenta` |
 
-El acceso de cliente solicita usuario, contraseña y RUC de la tienda. Este contexto evita ambigüedades porque el mismo nombre de usuario puede existir en establecimientos distintos.
+El acceso de cliente solicita únicamente usuario y contraseña. Los usuarios de cliente nuevos son únicos en FINVEX; si existieran cuentas históricas ambiguas, la API rechaza el acceso sin revelar información de otras tiendas.
 
 No hay credenciales reales en este repositorio. El usuario de sistema y todas las contraseñas se configuran localmente en el backend.
 
@@ -69,6 +69,7 @@ No hay credenciales reales en este repositorio. El usuario de sistema y todas la
 - La tasa compensatoria debe ser mayor que cero; la moratoria puede ser cero.
 - El plazo máximo es de 1 a 36 meses.
 - DNI: ocho dígitos; RUC: once dígitos.
+- Contraseñas nuevas y cambios de contraseña: mínimo ocho caracteres.
 - Los pagos deben coincidir exactamente con el total exigible informado por la API.
 - El frontend valida el crédito disponible, pero el backend conserva la validación autoritativa.
 - El historial se consulta con `GET /api/clientes/{clienteId}/pagos`; no se usa `sessionStorage` como fuente de verdad.
@@ -83,7 +84,7 @@ La matriz completa de vistas, endpoints, DTO, errores y persistencia está en `d
 4. Registre productos y un cliente con reglas de crédito.
 5. Registre compras FinDeMes y Cuotas; revise estado de cuenta y cronograma.
 6. Genere el listado de corte y registre el monto exacto.
-7. Cierre sesión e ingrese como cliente usando también el RUC de la tienda.
+7. Cierre sesión e ingrese como cliente con su usuario y contraseña.
 8. Compruebe historial, separación por tienda y auditoría.
 
 ## Problemas conocidos
