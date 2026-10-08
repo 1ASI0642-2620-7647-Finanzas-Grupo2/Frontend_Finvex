@@ -138,7 +138,10 @@ export default function ClienteForm({ cliente, onSaved, onCancel }: { cliente?: 
       </Select>
       <div className="hidden sm:block" />
       <Input label="Tasa compensatoria anual (%)" help={HELP.tasaCompensatoria} type="number" min="0.0001" step="0.0001" value={form.tasaCompensatoria} onChange={set('tasaCompensatoria')} placeholder="Ej. 36" required />
-      <Input label="Tasa moratoria anual (%)" help={HELP.tasaMoratoria} type="number" min="0" step="0.0001" value={form.tasaMoratoria} onChange={set('tasaMoratoria')} placeholder="Ej. 12" required />
+      <div>
+        <Input label="Tasa moratoria anual (%)" help={HELP.tasaMoratoria} type="number" min="0" step="0.0001" value={form.tasaMoratoria} onChange={set('tasaMoratoria')} placeholder="Ej. 12" required />
+        {Number(form.tasaMoratoria) === 0 && <p className="mt-2 rounded-lg bg-indigo-50 px-3 py-2 text-xs leading-5 text-indigo-800">Si la tasa moratoria es 0, el sistema utiliza la tasa compensatoria para calcular la mora{form.tasaCompensatoria ? ` (${form.tasaCompensatoria} % anual, tipo ${form.tipoTasa.toLowerCase()})` : ''}.</p>}
+      </div>
       <Input label="Día de corte" help={HELP.diaCorte} type="number" min="1" max="28" step="1" value={form.diaCorte} onChange={set('diaCorte')} required />
       <Input label="Día de pago" help={HELP.diaPago} type="number" min="1" max="28" step="1" value={form.diaPago} onChange={set('diaPago')} required />
       <Input label="Plazo máximo (meses)" help={HELP.maxMeses} type="number" min="1" max="36" step="1" value={form.maxMeses} onChange={set('maxMeses')} required />
@@ -146,7 +149,7 @@ export default function ClienteForm({ cliente, onSaved, onCancel }: { cliente?: 
       <Input label="Usuario cliente" help={HELP.usuarioCliente} value={form.usuario} onChange={set('usuario')} disabled={editing} autoComplete="off" minLength={FIELD_LIMITS.usernameMin} maxLength={FIELD_LIMITS.usernameMax} required={!editing} />
       <Input label={editing ? 'Nueva contraseña' : 'Contraseña'} help={editing ? HELP.passwordEdicion : HELP.password} type="password" value={form.password} onChange={set('password')} autoComplete="new-password" minLength={FIELD_LIMITS.passwordMin} required={!editing} />
       {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 sm:col-span-2">{error}</p>}
-      <div className="flex gap-3 sm:col-span-2">
+      <div className="flex flex-col-reverse gap-3 sm:col-span-2 sm:flex-row">
         {onCancel && (
           <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
             Cancelar

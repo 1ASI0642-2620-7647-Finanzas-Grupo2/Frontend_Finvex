@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { CircleAlert, Package, PenLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api, assetUrl } from '../api/axios';
-import { Button, Input, Select } from './ui';
+import { Button, Checkbox, Input, Select } from './ui';
 import type { ClienteDetalle, CompraRequest, CompraResponse, ModalidadCompra, Producto } from '../types';
 import { getErrorMessage } from '../utils/errors';
 import { formatCurrency, round2, toApiDateTime } from '../utils/format';
@@ -20,6 +20,7 @@ export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: Cl
   const [modalidad, setModalidad] = useState<ModalidadCompra>('FinDeMes');
   const [plazo, setPlazo] = useState('1');
   const [fecha, setFecha] = useState('');
+  const [simulationDate, setSimulationDate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -125,7 +126,7 @@ export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: Cl
           {seleccionado && (
             <div className="flex items-center gap-3 rounded-xl border p-3">
               {seleccionado.imagenUrl ? (
-                <img src={assetUrl(seleccionado.imagenUrl)} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                <img src={assetUrl(seleccionado.imagenUrl)} alt={`Imagen de ${seleccionado.descripcion}`} className="h-14 w-14 rounded-lg object-cover" />
               ) : (
                 <div className="grid h-14 w-14 place-items-center rounded-lg bg-slate-100 text-slate-400">
                   <Package className="h-6 w-6" />
@@ -160,7 +161,10 @@ export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: Cl
         </Select>
         {modalidad === 'Cuotas' ? <Input label={`Plazo en meses (máx. ${cliente.maxMeses})`} help={HELP.plazoMeses} type="number" min="1" max={cliente.maxMeses} step="1" value={plazo} onChange={(e) => setPlazo(e.target.value)} required /> : <Input label="Plazo en meses" help={HELP.plazoMeses} value="1" disabled />}
       </div>
-      <Input label="Fecha y hora de compra" help={HELP.fechaCompra} type="datetime-local" step="1" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+      <div className="space-y-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+        <Checkbox label="Usar una fecha manual" help={HELP.fechaCompra} checked={simulationDate} onChange={(event) => { setSimulationDate(event.target.checked); if (!event.target.checked) setFecha(''); }} />
+        {simulationDate ? <Input label="Fecha y hora de simulación" help={HELP.fechaCompra} type="datetime-local" step="1" value={fecha} onChange={(event) => setFecha(event.target.value)} required /> : <p className="text-xs leading-5 text-indigo-800">Fecha automática: el backend registrará la fecha y hora actual de Lima.</p>}
+      </div>
       <div className={`rounded-xl p-4 text-sm ${excede ? 'bg-rose-50 text-rose-700' : 'bg-indigo-50 text-indigo-900'}`}>
         <div className="flex justify-between">
           <span>{modo === 'catalogo' && seleccionado ? `${formatCurrency(seleccionado.precioLista, cliente.moneda)} × ${Number(cantidad) || 0}` : 'Total a crédito'}</span>
@@ -178,7 +182,7 @@ export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: Cl
         )}
       </div>
       {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-      <div className="flex gap-3">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row">
         <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
           Cancelar
         </Button>
