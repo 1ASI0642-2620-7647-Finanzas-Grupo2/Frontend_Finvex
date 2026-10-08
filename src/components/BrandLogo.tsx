@@ -1,29 +1,30 @@
 type BrandLogoProps = {
   compact?: boolean;
+  stacked?: boolean;
   className?: string;
   priority?: boolean;
 };
 
-export default function BrandLogo({ compact = false, className = '', priority = false }: BrandLogoProps) {
-  if (compact) {
-    return (
-      <img
-        src="/assets/finvex-isotipo.png"
-        alt="FINVEX"
-        className={`h-10 w-10 shrink-0 object-contain ${className}`}
-        decoding="async"
-        fetchPriority={priority ? 'high' : 'auto'}
-      />
-    );
-  }
+export default function BrandLogo({
+  compact = false,
+  stacked = false,
+  className = '',
+  priority = false,
+}: BrandLogoProps) {
+  const src = compact
+    ? '/assets/finvex-isotipo.png'
+    : stacked
+      ? '/assets/finvex-logo.png'
+      : '/assets/finvex-horizontal.png';
 
   return (
-    <span className={`relative block h-20 w-32 shrink-0 overflow-hidden ${className}`}>
+    <span className={`inline-flex shrink-0 items-center justify-center ${className}`}>
       <img
-        src="/assets/finvex-logo.png"
+        src={src}
         alt="FINVEX"
-        className="absolute left-0 top-1/2 h-32 w-32 -translate-y-1/2 object-contain"
+        className="block h-full w-full object-contain"
         decoding="async"
+        loading={priority ? 'eager' : 'lazy'}
         fetchPriority={priority ? 'high' : 'auto'}
       />
     </span>

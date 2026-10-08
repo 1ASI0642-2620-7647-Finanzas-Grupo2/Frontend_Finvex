@@ -27,7 +27,7 @@ export default function PanelLayout({ items, eyebrow, subtitle, initials }: { it
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 lg:pl-64 print:bg-white print:pl-0">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:flex lg:flex-col print:hidden">
-        <div className="flex h-20 items-center border-b px-6"><BrandLogo className="h-16 w-28" priority /></div>
+        <div className="flex h-20 items-center border-b px-6"><BrandLogo className="h-12 w-44" priority /></div>
         {navigation()}
       </aside>
 
@@ -36,7 +36,7 @@ export default function PanelLayout({ items, eyebrow, subtitle, initials }: { it
           <button type="button" aria-label="Cerrar menú" className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
           <aside className="relative flex h-full w-[min(19rem,88vw)] flex-col bg-white shadow-2xl" aria-label="Menú móvil">
             <div className="flex h-20 items-center justify-between border-b px-5">
-              <BrandLogo className="h-16 w-28" priority />
+              <BrandLogo className="h-12 w-44" priority />
               <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú" className="grid h-11 w-11 place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"><X className="h-6 w-6" /></button>
             </div>
             {navigation(() => setMenuOpen(false))}
