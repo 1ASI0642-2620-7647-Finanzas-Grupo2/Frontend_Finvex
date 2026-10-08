@@ -1,7 +1,74 @@
-import type { ReactNode } from 'react';
-import { LogOut } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import BrandLogo from '../components/BrandLogo';
 import { useAuthStore } from '../store/authStore';
+
 export interface NavEntry { to: string; label: string; icon: ReactNode; end?: boolean }
-export default function PanelLayout({ items, eyebrow, subtitle, initials }: { items: NavEntry[]; eyebrow: string; subtitle: string; initials: string }) { const navigate = useNavigate(); const clear = useAuthStore((s) => s.clearUser); const usuario = useAuthStore((s) => s.user?.usuario); const logout = () => { clear(); navigate('/login'); }; return <div className="finvex-panel min-h-screen bg-slate-50 lg:pl-64 print:bg-white print:pl-0"><aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white lg:flex lg:flex-col print:hidden"><div className="flex h-20 items-center gap-3 border-b px-7"><div className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-600 font-black text-white">F</div><b className="text-xl">finvex</b></div><nav className="flex-1 space-y-1 p-4">{items.map((item) => <NavItem key={item.to} {...item} />)}</nav><button onClick={logout} className="m-4 flex gap-2 p-3 text-sm text-slate-500"><LogOut className="h-4 w-4" />Cerrar sesión</button></aside><main><header className="flex h-20 items-center justify-between border-b bg-white px-5 lg:px-10 print:hidden"><div><p className="text-xs font-bold uppercase tracking-widest text-indigo-600">{eyebrow}</p><p className="text-sm text-slate-500">{subtitle}</p></div><div className="flex items-center gap-3">{usuario && <span className="hidden text-sm text-slate-500 sm:inline">{usuario}</span>}<div className="grid h-10 w-10 place-items-center rounded-full bg-indigo-50 font-bold text-indigo-700">{initials}</div><button onClick={logout} aria-label="Cerrar sesión" className="lg:hidden"><LogOut className="h-5 w-5 text-slate-400" /></button></div></header><nav className="flex gap-1 overflow-x-auto border-b bg-white px-3 py-2 lg:hidden print:hidden">{items.map((item) => <NavItem key={item.to} {...item} compact />)}</nav><div className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8 xl:p-10 print:p-0"><Outlet /></div></main></div>; }
-function NavItem({ to, label, icon, end, compact }: NavEntry & { compact?: boolean }) { return <NavLink end={end} to={to} className={({ isActive }) => `flex shrink-0 items-center gap-3 rounded-xl text-sm font-semibold ${compact ? 'px-3 py-2' : 'px-3 py-3'} ${isActive ? 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}><span className="[&>svg]:h-5 [&>svg]:w-5">{icon}</span>{label}</NavLink>; }
+
+export default function PanelLayout({ items, eyebrow, subtitle, initials }: { items: NavEntry[]; eyebrow: string; subtitle: string; initials: string }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const clear = useAuthStore((state) => state.clearUser);
+  const usuario = useAuthStore((state) => state.user?.usuario);
+  const logout = () => { clear(); navigate('/login'); };
+
+  const navigation = (onNavigate?: () => void) => (
+    <>
+      <nav aria-label="Navegación principal" className="flex-1 space-y-1 overflow-y-auto p-4">
+        {items.map((item) => <NavItem key={item.to} {...item} onNavigate={onNavigate} />)}
+      </nav>
+      <button type="button" onClick={logout} className="m-4 flex min-h-11 items-center gap-3 rounded-xl p-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200">
+        <LogOut className="h-5 w-5" />Cerrar sesión
+      </button>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 lg:pl-64 print:bg-white print:pl-0">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:flex lg:flex-col print:hidden">
+        <div className="flex h-20 items-center border-b px-6"><BrandLogo className="h-12 w-44" priority /></div>
+        {navigation()}
+      </aside>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden print:hidden">
+          <button type="button" aria-label="Cerrar menú" className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
+          <aside className="relative flex h-full w-[min(19rem,88vw)] flex-col bg-white shadow-2xl" aria-label="Menú móvil">
+            <div className="flex h-20 items-center justify-between border-b px-5">
+              <BrandLogo className="h-12 w-44" priority />
+              <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú" className="grid h-11 w-11 place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"><X className="h-6 w-6" /></button>
+            </div>
+            {navigation(() => setMenuOpen(false))}
+          </aside>
+        </div>
+      )}
+
+      <main className="min-w-0">
+        <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between gap-3 border-b bg-white/95 px-3 backdrop-blur sm:px-5 lg:static lg:h-20 lg:px-10 print:hidden">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <button type="button" onClick={() => setMenuOpen(true)} aria-label="Abrir menú" aria-expanded={menuOpen} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200 lg:hidden"><Menu className="h-6 w-6" /></button>
+            <BrandLogo compact className="h-9 w-9 lg:hidden" />
+            <div className="min-w-0">
+              <p className="truncate text-[0.65rem] font-bold uppercase tracking-widest text-indigo-600 sm:text-xs">{eyebrow}</p>
+              <p className="hidden truncate text-sm text-slate-500 sm:block">{subtitle}</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {usuario && <span className="hidden max-w-44 truncate text-sm text-slate-500 md:inline">{usuario}</span>}
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-indigo-50 text-sm font-bold text-indigo-700" aria-label={`Perfil ${initials}`}>{initials}</div>
+          </div>
+        </header>
+        <div className="min-w-0 p-3 sm:p-5 lg:p-10 print:p-0"><Outlet /></div>
+      </main>
+    </div>
+  );
+}
+
+function NavItem({ to, label, icon, end, onNavigate }: NavEntry & { onNavigate?: () => void }) {
+  return (
+    <NavLink end={end} to={to} onClick={onNavigate} className={({ isActive }) => `flex min-h-11 items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200 ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+      <span className="[&>svg]:h-5 [&>svg]:w-5">{icon}</span>{label}
+    </NavLink>
+  );
+}

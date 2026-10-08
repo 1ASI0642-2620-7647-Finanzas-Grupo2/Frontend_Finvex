@@ -3,11 +3,141 @@ import { ArrowRight, LockKeyhole, ServerCog, ShieldCheck, Store, UserRound } fro
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../api/axios';
+import BrandLogo from '../components/BrandLogo';
 import { Button, Input } from '../components/ui';
 import { homeFor, useAuthStore } from '../store/authStore';
 import type { LoginRequest, LoginResponse, Role } from '../types';
 import { getErrorMessage } from '../utils/errors';
-const endpoints: Record<Role, string> = { Admin: '/api/auth/login/admin', Cliente: '/api/auth/login/cliente', AdminSistema: '/api/auth/login/sistema' };
-const roles: { value: Role; label: string; icon: ReactElement }[] = [{ value: 'Admin', label: 'Dueño', icon: <Store className="h-4 w-4" /> }, { value: 'Cliente', label: 'Cliente', icon: <UserRound className="h-4 w-4" /> }, { value: 'AdminSistema', label: 'Sistema', icon: <ServerCog className="h-4 w-4" /> }];
+import { HELP } from '../utils/help';
+const endpoints: Record<Role, string> = {
+  Admin: '/api/auth/login/admin',
+  Cliente: '/api/auth/login/cliente',
+  AdminSistema: '/api/auth/login/sistema',
+};
+const roles: { value: Role; label: string; icon: ReactElement }[] = [
+  { value: 'Admin', label: 'Dueño', icon: <Store className="h-4 w-4" /> },
+  {
+    value: 'Cliente',
+    label: 'Cliente',
+    icon: <UserRound className="h-4 w-4" />,
+  },
+  {
+    value: 'AdminSistema',
+    label: 'Sistema',
+    icon: <ServerCog className="h-4 w-4" />,
+  },
+];
 const isRole = (value: string | null): value is Role => value === 'Admin' || value === 'Cliente' || value === 'AdminSistema';
-export default function LoginView() { const navigate = useNavigate(); const [params] = useSearchParams(); const setUser = useAuthStore((s) => s.setUser); const initialRole = params.get('rol'); const [role, setRole] = useState<Role>(isRole(initialRole) ? initialRole : 'Admin'); const [usuario, setUsuario] = useState(''); const [password, setPassword] = useState(''); const [loading, setLoading] = useState(false); const [error, setError] = useState(''); useEffect(() => { if (params.get('expirada')) toast.error('Tu sesión expiró. Vuelve a iniciar sesión.', { id: 'sesion-expirada' }); }, [params]); const submit = async (e: FormEvent) => { e.preventDefault(); setLoading(true); setError(''); try { const { data } = await api.post<LoginResponse>(endpoints[role], { usuario: usuario.trim(), password } satisfies LoginRequest); if (!data?.token) throw new Error('La respuesta no contiene un token.'); const rol = isRole(data.rol) ? data.rol : role; setUser({ token: data.token, role: rol, id: data.id, usuario: usuario.trim(), tiendaId: data.tiendaId, clienteId: data.clienteId, expiraEn: data.expiraEn }); toast.success('Sesión iniciada'); navigate(homeFor(rol), { replace: true }); } catch (err) { const message = getErrorMessage(err, 'No pudimos iniciar sesión.'); setError(message); toast.error(message); } finally { setLoading(false); } }; return <div className="grid min-h-screen lg:grid-cols-2"><section className="hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500 font-black">F</div><b className="text-xl">finvex</b></div><div><p className="mb-5 text-sm font-bold uppercase tracking-[.25em] text-indigo-300">Crédito que mueve negocios</p><h1 className="text-6xl font-black leading-none">Vende hoy.<br /><span className="text-indigo-300">Crece siempre.</span></h1><p className="mt-7 max-w-md text-lg leading-8 text-slate-300">Gestiona tus fiados, entiende tus números y toma decisiones con seguridad.</p></div><div className="flex gap-6 text-sm text-slate-300"><span className="flex gap-2"><ShieldCheck className="h-4 w-4 text-emerald-400" />Datos protegidos</span><span className="flex gap-2"><LockKeyhole className="h-4 w-4 text-emerald-400" />Acceso seguro</span></div></section><section className="flex items-center justify-center bg-slate-50 p-5"><div className="w-full max-w-md"><div className="mb-10 lg:hidden"><b className="text-2xl">finvex<span className="text-indigo-600">.</span></b></div><p className="text-sm font-bold uppercase tracking-widest text-indigo-600">Bienvenido de vuelta</p><h2 className="mt-2 text-3xl font-black">Entra a tu espacio</h2><p className="mt-2 text-slate-500">Consulta y gestiona tus créditos.</p><div className="my-7 grid grid-cols-3 rounded-xl bg-slate-200 p-1">{roles.map((r) => <button key={r.value} type="button" onClick={() => { setRole(r.value); setError(''); }} className={`flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold ${role === r.value ? 'bg-white shadow-sm' : 'text-slate-500'}`}>{r.icon}{r.label}</button>)}</div><form onSubmit={submit} className="space-y-5"><Input label="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" required /><Input label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />{error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<Button type="submit" loading={loading} className="w-full">Entrar <ArrowRight className="h-4 w-4" /></Button></form>{role === 'Admin' && <p className="mt-8 text-center text-sm text-slate-500">¿Tienes un negocio? <Link className="font-bold text-indigo-600" to="/registro-tienda">Registra tu tienda</Link></p>}</div></section></div>; }
+export default function LoginView() {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const setUser = useAuthStore((s) => s.setUser);
+  const initialRole = params.get('rol');
+  const [role, setRole] = useState<Role>(isRole(initialRole) ? initialRole : 'Admin');
+  const [usuario, setUsuario] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (params.get('expirada'))
+      toast.error('Tu sesión expiró. Vuelve a iniciar sesión.', {
+        id: 'sesion-expirada',
+      });
+  }, [params]);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await api.post<LoginResponse>(endpoints[role], {
+        usuario: usuario.trim(),
+        password,
+      } satisfies LoginRequest);
+      if (!data?.token) throw new Error('La respuesta no contiene un token.');
+      const rol = isRole(data.rol) ? data.rol : role;
+      setUser({
+        token: data.token,
+        role: rol,
+        id: data.id,
+        usuario: usuario.trim(),
+        tiendaId: data.tiendaId,
+        clienteId: data.clienteId,
+        expiraEn: data.expiraEn,
+      });
+      toast.success('Sesión iniciada');
+      navigate(homeFor(rol), { replace: true });
+    } catch (err) {
+      const message = getErrorMessage(err, 'No pudimos iniciar sesión.');
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <section className="hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <BrandLogo className="h-24 w-40" priority />
+        <div>
+          <p className="mb-5 text-sm font-bold uppercase tracking-[.25em] text-indigo-300">Crédito que mueve negocios</p>
+          <h1 className="text-6xl font-black leading-none">
+            Vende hoy.
+            <br />
+            <span className="text-indigo-300">Crece siempre.</span>
+          </h1>
+          <p className="mt-7 max-w-md text-lg leading-8 text-slate-300">Gestiona tus fiados, entiende tus números y toma decisiones con seguridad.</p>
+        </div>
+        <div className="flex gap-6 text-sm text-slate-300">
+          <span className="flex gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            Datos protegidos
+          </span>
+          <span className="flex gap-2">
+            <LockKeyhole className="h-4 w-4 text-emerald-400" />
+            Acceso seguro
+          </span>
+        </div>
+      </section>
+      <section className="flex min-w-0 items-center justify-center bg-slate-50 px-3 py-6 sm:p-5">
+        <div className="w-full max-w-md">
+          <BrandLogo className="mb-6 h-20 w-32 lg:hidden" priority />
+          <p className="text-sm font-bold uppercase tracking-widest text-indigo-600">Bienvenido de vuelta</p>
+          <h2 className="mt-2 text-3xl font-black">Entra a tu espacio</h2>
+          <p className="mt-2 text-slate-500">Consulta y gestiona tus créditos.</p>
+          <div className="my-7 grid grid-cols-3 rounded-xl bg-slate-200 p-1">
+            {roles.map((r) => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => {
+                  setRole(r.value);
+                  setError('');
+                }}
+                aria-pressed={role === r.value}
+                className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200 min-[375px]:flex-row min-[375px]:gap-2 min-[375px]:text-sm ${role === r.value ? 'bg-white shadow-sm' : 'text-slate-500'}`}>
+                {r.icon}
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <form onSubmit={submit} className="space-y-5">
+            <Input label="Usuario" help={HELP.usuarioLogin} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" required />
+            <Input label="Contraseña" help={HELP.passwordLogin} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+            {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+            <Button type="submit" loading={loading} className="w-full">
+              Entrar <ArrowRight className="h-4 w-4" />
+            </Button>
+          </form>
+          {role === 'Admin' && (
+            <p className="mt-8 text-center text-sm text-slate-500">
+              ¿Tienes un negocio?{' '}
+              <Link className="font-bold text-indigo-600" to="/registro-tienda">
+                Registra tu tienda
+              </Link>
+            </p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}

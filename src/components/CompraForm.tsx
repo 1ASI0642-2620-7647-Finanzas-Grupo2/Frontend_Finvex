@@ -1,11 +1,395 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+
 import { CircleAlert, Package, PenLine } from 'lucide-react';
+
 import toast from 'react-hot-toast';
+
 import { api, assetUrl } from '../api/axios';
-import { Button, Input, Select } from './ui';
+
+import { Button, Checkbox, Input, Select } from './ui';
+
 import type { ClienteDetalle, CompraRequest, CompraResponse, ModalidadCompra, Producto } from '../types';
+
 import { getErrorMessage } from '../utils/errors';
+
 import { formatCurrency, round2, toApiDateTime } from '../utils/format';
+
 import { HELP } from '../utils/help';
+
+import { FIELD_LIMITS, hasTrimmedLength } from '../utils/validation';
+
 type Modo = 'catalogo' | 'manual';
-export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: ClienteDetalle; onSaved: (compra: CompraResponse) => void; onCancel: () => void }) { const [modo, setModo] = useState<Modo>('catalogo'); const [productos, setProductos] = useState<Producto[] | null>(null); const [productosError, setProductosError] = useState(''); const [productoId, setProductoId] = useState(''); const [cantidad, setCantidad] = useState('1'); const [producto, setProducto] = useState(''); const [precio, setPrecio] = useState(''); const [modalidad, setModalidad] = useState<ModalidadCompra>('FinDeMes'); const [plazo, setPlazo] = useState('1'); const [fecha, setFecha] = useState(''); const [saving, setSaving] = useState(false); const [error, setError] = useState(''); useEffect(() => { api.get<Producto[]>('/api/productos').then(({ data }) => { const activos = data.filter((p) => p.activo); setProductos(activos); if (!activos.length) setModo('manual'); }).catch((err) => { setProductos([]); setProductosError(getErrorMessage(err, 'No pudimos cargar el catálogo.')); setModo('manual'); }); }, []); const seleccionado = productos?.find((p) => String(p.id) === productoId); const modalidades = useMemo<ModalidadCompra[]>(() => (modo === 'catalogo' && seleccionado ? [...(seleccionado.permiteFinDeMes ? ['FinDeMes' as const] : []), ...(seleccionado.permiteCuotas ? ['Cuotas' as const] : [])] : ['FinDeMes', 'Cuotas']), [modo, seleccionado]); useEffect(() => { if (!modalidades.includes(modalidad) && modalidades.length) setModalidad(modalidades[0]); }, [modalidades, modalidad]); useEffect(() => { setPlazo(modalidad === 'FinDeMes' ? '1' : String(Math.min(Math.max(2, Number(plazo) || 2), cliente.maxMeses))); }, [modalidad]); const total = modo === 'catalogo' ? round2((seleccionado?.precioLista ?? 0) * (Number(cantidad) || 0)) : round2(Number(precio) || 0); const excede = total > cliente.creditoDisponible; const submit = async (e: FormEvent) => { e.preventDefault(); setError(''); const meses = modalidad === 'FinDeMes' ? 1 : Number(plazo); const invalid = cliente.estado !== 'Activo' ? 'El cliente está inactivo y no puede comprar.' : modo === 'catalogo' && !seleccionado ? 'Selecciona un producto del catálogo.' : modo === 'catalogo' && (!Number.isInteger(Number(cantidad)) || Number(cantidad) < 1) ? 'La cantidad debe ser un número entero mayor que cero.' : modo === 'manual' && !producto.trim() ? 'Describe el producto o servicio.' : !(total > 0) ? 'El precio debe ser mayor que cero.' : !Number.isInteger(meses) || meses < 1 ? 'Ingresa un plazo válido.' : meses > cliente.maxMeses ? `El plazo no puede superar ${cliente.maxMeses} meses.` : !modalidades.includes(modalidad) ? 'El producto no permite esa modalidad.' : ''; if (invalid) { setError(invalid); return; } const body: CompraRequest = modo === 'catalogo' && seleccionado ? { producto: seleccionado.descripcion, precioCredito: total, modalidad, plazoMeses: meses, fechaCompra: toApiDateTime(fecha), productoId: seleccionado.id, cantidad: Number(cantidad) } : { producto: producto.trim(), precioCredito: total, modalidad, plazoMeses: meses, fechaCompra: toApiDateTime(fecha), cantidad: 1 }; setSaving(true); try { const { data } = await api.post<CompraResponse>(`/api/clientes/${cliente.clienteId}/compras`, body); toast.success('Compra registrada'); onSaved(data); } catch (err) { const message = getErrorMessage(err, 'No pudimos registrar la compra.'); setError(message); toast.error(message); } finally { setSaving(false); } }; return <form onSubmit={submit} noValidate className="space-y-4"><div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1">{([['catalogo', 'Producto del catálogo', Package], ['manual', 'Ingreso manual', PenLine]] as const).map(([value, label, Icon]) => <button key={value} type="button" disabled={value === 'catalogo' && !productos?.length} onClick={() => { setModo(value); setError(''); }} className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold disabled:opacity-50 ${modo === value ? 'bg-white shadow-sm' : 'text-slate-500'}`}><Icon className="h-4 w-4" />{label}</button>)}</div>{productos === null ? <p className="text-sm text-slate-500">Cargando catálogo...</p> : modo === 'catalogo' ? <><Select label="Producto" help={HELP.precioLista} value={productoId} onChange={(e) => setProductoId(e.target.value)} required><option value="">Selecciona un producto activo</option>{productos.map((p) => <option key={p.id} value={p.id}>{p.marca} · {p.descripcion} ({p.unidadMedida}) · {formatCurrency(p.precioLista, cliente.moneda)}</option>)}</Select>{seleccionado && <div className="flex items-center gap-3 rounded-xl border p-3">{seleccionado.imagenUrl ? <img src={assetUrl(seleccionado.imagenUrl)} alt="" className="h-14 w-14 rounded-lg object-cover" /> : <div className="grid h-14 w-14 place-items-center rounded-lg bg-slate-100 text-slate-400"><Package className="h-6 w-6" /></div>}<div className="text-sm"><p className="font-bold">{seleccionado.marca} · {seleccionado.descripcion}</p><p className="text-slate-500">Precio lista {formatCurrency(seleccionado.precioLista, cliente.moneda)} · {[seleccionado.permiteFinDeMes && 'Fin de mes', seleccionado.permiteCuotas && 'Cuotas'].filter(Boolean).join(' y ')}</p></div></div>}<Input label="Cantidad" help={HELP.cantidad} type="number" min="1" step="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)} required /></> : <>{productosError && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{productosError}</p>}<Input label="Producto o servicio" value={producto} onChange={(e) => setProducto(e.target.value)} required /><Input label="Precio a crédito" help={HELP.precioCredito} type="number" min="0.01" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} required /></>}<div className="grid gap-4 sm:grid-cols-2"><Select label="Modalidad" help={HELP.modalidad} value={modalidad} onChange={(e) => setModalidad(e.target.value as ModalidadCompra)}>{modalidades.map((m) => <option key={m} value={m}>{m === 'FinDeMes' ? 'Fin de mes' : 'Cuotas'}</option>)}</Select>{modalidad === 'Cuotas' ? <Input label={`Plazo en meses (máx. ${cliente.maxMeses})`} help={HELP.plazoMeses} type="number" min="1" max={cliente.maxMeses} step="1" value={plazo} onChange={(e) => setPlazo(e.target.value)} required /> : <Input label="Plazo en meses" help={HELP.plazoMeses} value="1" disabled />}</div><Input label="Fecha y hora de compra" help={HELP.fechaCompra} type="datetime-local" step="1" value={fecha} onChange={(e) => setFecha(e.target.value)} /><div className={`rounded-xl p-4 text-sm ${excede ? 'bg-rose-50 text-rose-700' : 'bg-indigo-50 text-indigo-900'}`}><div className="flex justify-between"><span>{modo === 'catalogo' && seleccionado ? `${formatCurrency(seleccionado.precioLista, cliente.moneda)} × ${Number(cantidad) || 0}` : 'Total a crédito'}</span><b className="tabular-nums">{formatCurrency(total, cliente.moneda)}</b></div><div className="mt-1 flex justify-between text-xs opacity-80"><span>Crédito disponible</span><span className="tabular-nums">{formatCurrency(cliente.creditoDisponible, cliente.moneda)}</span></div>{excede && <p className="mt-2 flex items-center gap-2 text-xs font-semibold"><CircleAlert className="h-4 w-4" />El total supera el crédito disponible; el sistema rechazará la compra.</p>}</div>{error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<div className="flex gap-3"><Button type="button" variant="secondary" onClick={onCancel} className="flex-1">Cancelar</Button><Button loading={saving} type="submit" className="flex-1">Guardar compra</Button></div></form>; }
+
+export default function CompraForm({ cliente, onSaved, onCancel }: { cliente: ClienteDetalle; onSaved: (compra: CompraResponse) => void; onCancel: () => void }) {
+
+  const [modo, setModo] = useState<Modo>('catalogo');
+
+  const [productos, setProductos] = useState<Producto[] | null>(null);
+
+  const [productosError, setProductosError] = useState('');
+
+  const [productoId, setProductoId] = useState('');
+
+  const [cantidad, setCantidad] = useState('1');
+
+  const [producto, setProducto] = useState('');
+
+  const [precio, setPrecio] = useState('');
+
+  const [modalidad, setModalidad] = useState<ModalidadCompra>('FinDeMes');
+
+  const [plazo, setPlazo] = useState('1');
+
+  const [fecha, setFecha] = useState('');
+
+  const [simulationDate, setSimulationDate] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+
+    api
+
+      .get<Producto[]>('/api/productos')
+
+      .then(({ data }) => {
+
+        const activos = data.filter((p) => p.activo);
+
+        setProductos(activos);
+
+        if (!activos.length) setModo('manual');
+
+      })
+
+      .catch((err) => {
+
+        setProductos([]);
+
+        setProductosError(getErrorMessage(err, 'No pudimos cargar el catálogo.'));
+
+        setModo('manual');
+
+      });
+
+  }, []);
+
+  const seleccionado = productos?.find((p) => String(p.id) === productoId);
+
+  const modalidades = useMemo<ModalidadCompra[]>(() => (modo === 'catalogo' && seleccionado ? [...(seleccionado.permiteFinDeMes ? ['FinDeMes' as const] : []), ...(seleccionado.permiteCuotas ? ['Cuotas' as const] : [])] : ['FinDeMes', 'Cuotas']), [modo, seleccionado]);
+
+  useEffect(() => {
+
+    if (!modalidades.includes(modalidad) && modalidades.length) setModalidad(modalidades[0]);
+
+  }, [modalidades, modalidad]);
+
+  useEffect(() => {
+
+    setPlazo(modalidad === 'FinDeMes' ? '1' : String(Math.min(Math.max(2, Number(plazo) || 2), cliente.maxMeses)));
+
+  }, [modalidad]);
+
+  const total = modo === 'catalogo' ? round2((seleccionado?.precioLista ?? 0) * (Number(cantidad) || 0)) : round2(Number(precio) || 0);
+
+  const excede = total > cliente.creditoDisponible;
+
+  const submit = async (e: FormEvent) => {
+
+    e.preventDefault();
+
+    setError('');
+
+    const meses = modalidad === 'FinDeMes' ? 1 : Number(plazo);
+
+    const invalid = cliente.estado !== 'Activo' ? 'El cliente está inactivo y no puede comprar.' : modo === 'catalogo' && !seleccionado ? 'Selecciona un producto del catálogo.' : modo === 'catalogo' && (!Number.isInteger(Number(cantidad)) || Number(cantidad) < 1) ? 'La cantidad debe ser un número entero mayor que cero.' : modo === 'manual' && !hasTrimmedLength(producto, FIELD_LIMITS.productDescriptionMin, FIELD_LIMITS.productDescriptionMax) ? `La descripción debe tener entre ${FIELD_LIMITS.productDescriptionMin} y ${FIELD_LIMITS.productDescriptionMax} caracteres.` : !(total > 0) ? 'El precio debe ser mayor que cero.' : excede ? 'El total supera el crédito disponible del cliente.' : !Number.isInteger(meses) || meses < 1 ? 'Ingresa un plazo válido.' : meses > cliente.maxMeses ? `El plazo no puede superar ${cliente.maxMeses} ${cliente.maxMeses === 1 ? 'mes' : 'meses'}.` : !modalidades.includes(modalidad) ? 'El producto no permite esa modalidad.' : '';
+
+    if (invalid) {
+
+      setError(invalid);
+
+      return;
+
+    }
+
+    const body: CompraRequest =
+
+      modo === 'catalogo' && seleccionado
+
+        ? {
+
+            producto: seleccionado.descripcion,
+
+            precioCredito: total,
+
+            modalidad,
+
+            plazoMeses: meses,
+
+            fechaCompra: toApiDateTime(fecha),
+
+            productoId: seleccionado.id,
+
+            cantidad: Number(cantidad),
+
+          }
+
+        : {
+
+            producto: producto.trim(),
+
+            precioCredito: total,
+
+            modalidad,
+
+            plazoMeses: meses,
+
+            fechaCompra: toApiDateTime(fecha),
+
+            cantidad: 1,
+
+          };
+
+    setSaving(true);
+
+    try {
+
+      const { data } = await api.post<CompraResponse>(`/api/clientes/${cliente.clienteId}/compras`, body);
+
+      toast.success('Compra registrada');
+
+      onSaved(data);
+
+    } catch (err) {
+
+      const message = getErrorMessage(err, 'No pudimos registrar la compra.');
+
+      setError(message);
+
+      toast.error(message);
+
+    } finally {
+
+      setSaving(false);
+
+    }
+
+  };
+
+  return (
+
+    <form onSubmit={submit} noValidate className="space-y-4">
+
+      <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1">
+
+        {(
+
+          [
+
+            ['catalogo', 'Producto del catálogo', Package],
+
+            ['manual', 'Ingreso manual', PenLine],
+
+          ] as const
+
+        ).map(([value, label, Icon]) => (
+
+          <button
+
+            key={value}
+
+            type="button"
+
+            disabled={value === 'catalogo' && !productos?.length}
+
+            onClick={() => {
+
+              setModo(value);
+
+              setError('');
+
+            }}
+
+            className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold disabled:opacity-50 ${modo === value ? 'bg-white shadow-sm' : 'text-slate-500'}`}>
+
+            <Icon className="h-4 w-4" />
+
+            {label}
+
+          </button>
+
+        ))}
+
+      </div>
+
+      {productos === null ? (
+
+        <p className="text-sm text-slate-500">Cargando catálogo...</p>
+
+      ) : modo === 'catalogo' ? (
+
+        <>
+
+          <Select label="Producto" help={HELP.precioLista} value={productoId} onChange={(e) => setProductoId(e.target.value)} required>
+
+            <option value="">Selecciona un producto activo</option>
+
+            {productos.map((p) => (
+
+              <option key={p.id} value={p.id}>
+
+                {p.marca} · {p.descripcion} ({p.unidadMedida}) · {formatCurrency(p.precioLista, cliente.moneda)}
+
+              </option>
+
+            ))}
+
+          </Select>
+
+          {seleccionado && (
+
+            <div className="flex items-center gap-3 rounded-xl border p-3">
+
+              {seleccionado.imagenUrl ? (
+
+                <img src={assetUrl(seleccionado.imagenUrl)} alt={`Imagen de ${seleccionado.descripcion}`} className="h-14 w-14 rounded-lg object-cover" />
+
+              ) : (
+
+                <div className="grid h-14 w-14 place-items-center rounded-lg bg-slate-100 text-slate-400">
+
+                  <Package className="h-6 w-6" />
+
+                </div>
+
+              )}
+
+              <div className="text-sm">
+
+                <p className="font-bold">
+
+                  {seleccionado.marca} · {seleccionado.descripcion}
+
+                </p>
+
+                <p className="text-slate-500">
+
+                  Precio lista {formatCurrency(seleccionado.precioLista, cliente.moneda)} · {[seleccionado.permiteFinDeMes && 'Fin de mes', seleccionado.permiteCuotas && 'Cuotas'].filter(Boolean).join(' y ')}
+
+                </p>
+
+              </div>
+
+            </div>
+
+          )}
+
+          <Input label="Cantidad" help={HELP.cantidad} type="number" min="1" step="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)} required />
+
+        </>
+
+      ) : (
+
+        <>
+
+          {productosError && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{productosError}</p>}
+
+          <Input label="Producto o servicio" help={HELP.productoManual} value={producto} onChange={(e) => setProducto(e.target.value)} minLength={FIELD_LIMITS.productDescriptionMin} maxLength={FIELD_LIMITS.productDescriptionMax} required />
+
+          <Input label="Precio a crédito" help={HELP.precioCredito} type="number" min="0.01" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} required />
+
+        </>
+
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+
+        <Select label="Modalidad" help={HELP.modalidad} value={modalidad} onChange={(e) => setModalidad(e.target.value as ModalidadCompra)}>
+
+          {modalidades.map((m) => (
+
+            <option key={m} value={m}>
+
+              {m === 'FinDeMes' ? 'Fin de mes' : 'Cuotas'}
+
+            </option>
+
+          ))}
+
+        </Select>
+
+        {modalidad === 'Cuotas' ? <Input label={`Plazo en meses (máx. ${cliente.maxMeses})`} help={HELP.plazoMeses} type="number" min="1" max={cliente.maxMeses} step="1" value={plazo} onChange={(e) => {
+
+  setPlazo(e.target.value);
+
+  setError('');
+
+}} required /> : <Input label="Plazo en meses" help={HELP.plazoMeses} value="1" disabled />}
+
+      </div>
+
+      <div className="space-y-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+
+        <Checkbox label="Usar una fecha manual" help={HELP.fechaCompra} checked={simulationDate} onChange={(event) => { setSimulationDate(event.target.checked); if (!event.target.checked) setFecha(''); }} />
+
+        {simulationDate ? <Input label="Fecha y hora de simulación" help={HELP.fechaCompra} type="datetime-local" step="1" value={fecha} onChange={(event) => setFecha(event.target.value)} required /> : <p className="text-xs leading-5 text-indigo-800">Fecha automática: el backend registrará la fecha y hora actual de Lima.</p>}
+
+      </div>
+
+      <div className={`rounded-xl p-4 text-sm ${excede ? 'bg-rose-50 text-rose-700' : 'bg-indigo-50 text-indigo-900'}`}>
+
+        <div className="flex justify-between">
+
+          <span>{modo === 'catalogo' && seleccionado ? `${formatCurrency(seleccionado.precioLista, cliente.moneda)} × ${Number(cantidad) || 0}` : 'Total a crédito'}</span>
+
+          <b className="tabular-nums">{formatCurrency(total, cliente.moneda)}</b>
+
+        </div>
+
+        <div className="mt-1 flex justify-between text-xs opacity-80">
+
+          <span>Crédito disponible</span>
+
+          <span className="tabular-nums">{formatCurrency(cliente.creditoDisponible, cliente.moneda)}</span>
+
+        </div>
+
+        {excede && (
+
+          <p className="mt-2 flex items-center gap-2 text-xs font-semibold">
+
+            <CircleAlert className="h-4 w-4" />
+
+            El total supera el crédito disponible; el sistema rechazará la compra.
+
+          </p>
+
+        )}
+
+      </div>
+
+      {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+
+      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+
+        <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
+
+          Cancelar
+
+        </Button>
+
+        <Button loading={saving} type="submit" className="flex-1">
+
+          Guardar compra
+
+        </Button>
+
+      </div>
+
+    </form>
+
+  );
+
+}
