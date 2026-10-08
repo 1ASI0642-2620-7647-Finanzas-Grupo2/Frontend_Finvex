@@ -38,12 +38,12 @@ export default function EstadoCuentaView() {
   const enMora = late > 0 || state.compras.some((c) => c.estado === 'Mora');
   return (
     <div>
-      <section className={`rounded-3xl p-6 text-white shadow-lg ${enMora ? 'bg-rose-600' : 'bg-indigo-600'}`}>
+      <section className={`rounded-3xl p-4 text-white shadow-lg sm:p-6 ${enMora ? 'bg-rose-600' : 'bg-indigo-600'}`}>
         <p className="flex items-center gap-1.5 text-sm text-white/80">
           Total a pagar
           <HelpTip text={HELP.montoPago} />
         </p>
-        <p className="mt-2 text-4xl font-black tabular-nums">{formatCurrency(state.totalExigible, state.moneda)}</p>
+        <p className="mt-2 break-words text-3xl font-black tabular-nums sm:text-4xl">{formatCurrency(state.totalExigible, state.moneda)}</p>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-white/80">
           <span className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
@@ -53,7 +53,7 @@ export default function EstadoCuentaView() {
           <span className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white">{enMora ? 'En mora' : 'Al día'}</span>
         </div>
       </section>
-      <div className="mt-5 grid grid-cols-3 gap-2">
+      <div className="mt-5 grid gap-2 min-[375px]:grid-cols-3">
         <Summary label="Capital" value={capital} moneda={state.moneda} />
         <Summary label="Interés" help={HELP.interesCompensatorio} value={interest} moneda={state.moneda} />
         <Summary label="Mora" help={HELP.interesMoratorio} value={late} moneda={state.moneda} danger />
@@ -70,13 +70,13 @@ export default function EstadoCuentaView() {
           <div className="space-y-3">
             {state.compras.map((item) => (
               <article key={item.compraId} className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-                <button onClick={() => setOpen(open === item.compraId ? null : item.compraId)} className="flex w-full items-center gap-3 p-4 text-left">
+                <button type="button" aria-expanded={item.cuotas?.length ? open === item.compraId : undefined} onClick={() => setOpen(open === item.compraId ? null : item.compraId)} className="flex min-h-11 w-full flex-wrap items-start gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-indigo-200 sm:flex-nowrap sm:items-center">
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-50 font-bold text-indigo-600">{item.producto[0]}</div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{item.producto}</p>
+                    <p className="break-words font-bold">{item.producto}</p>
                     <p className="text-xs text-slate-500">Capital pendiente {formatCurrency(item.capitalPendiente, state.moneda)}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="ml-14 w-full text-left sm:ml-0 sm:w-auto sm:text-right">
                     <b className="tabular-nums">{formatCurrency(item.totalExigible, state.moneda)}</b>
                     <div className="mt-1">
                       <EstadoBadge estado={estadoCompra(item)} />

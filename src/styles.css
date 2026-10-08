@@ -3,8 +3,12 @@
 @tailwind utilities;
 :root { font-family: 'DM Sans', 'Segoe UI', sans-serif; color: #0f172a; background: #f8fafc; font-synthesis: none; text-rendering: optimizeLegibility; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
+html { overflow-x: hidden; }
+body { margin: 0; min-width: 320px; overflow-x: hidden; }
 button, input, select { font: inherit; }
+a:focus-visible { outline: 3px solid #c7d2fe; outline-offset: 2px; }
+.table-scroll { scrollbar-gutter: stable; scrollbar-color: #a5b4fc #f1f5f9; }
+.table-scroll:focus-visible { border-radius: 0.75rem; outline: 3px solid #c7d2fe; outline-offset: -3px; }
 @media print {
   @page { size: A4; margin: 14mm; }
   :root, body { background: #fff; }

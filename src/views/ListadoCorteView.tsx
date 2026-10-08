@@ -116,7 +116,7 @@ export default function ListadoCorteView() {
         eyebrow="Listado de corte"
         title={cliente ? cliente.nombres : 'Listado de pago del ciclo'}
         subtitle={
-          <span className="flex items-center gap-1.5">
+          <span className="flex flex-wrap items-center gap-1.5">
             {cliente ? `DNI ${cliente.dni} · ` : ''}Compras del ciclo, cuotas que vencen e intereses por mora.
             <HelpTip text={HELP.listadoCorte} />
           </span>
@@ -176,8 +176,8 @@ export default function ListadoCorteView() {
             </p>
             <Card>
               {listado.items.length ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                <div className="table-scroll overflow-x-auto" tabIndex={0} aria-label="Listado de corte, desplaza horizontalmente en pantallas pequeñas">
+                  <table className="w-full min-w-[920px] text-left text-sm">
                     <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                       <tr>
                         <th className="px-4 py-3">Tipo</th>

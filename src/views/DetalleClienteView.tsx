@@ -74,16 +74,16 @@ export default function DetalleClienteView() {
       <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-indigo-600">Cuenta del cliente</p>
-          <h1 className="mt-2 flex flex-wrap items-center gap-3 text-3xl font-black">
+          <h1 className="mt-2 flex flex-wrap items-center gap-2 break-words text-2xl font-black sm:gap-3 sm:text-3xl">
             {cliente.nombres}
             <EstadoBadge estado={cliente.estado} />
             {state && <EstadoBadge estado={enMora ? 'Mora' : 'Pendiente'} />}
           </h1>
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 break-words text-sm text-slate-500 sm:text-base">
             DNI {cliente.dni} · Usuario {cliente.usuario} · Cliente #{cliente.clienteId}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button variant="secondary" onClick={() => setModal('editar')}>
             <Pencil className="h-4 w-4" />
             Editar
@@ -99,7 +99,7 @@ export default function DetalleClienteView() {
               Dar de alta
             </Button>
           )}
-          <Link to="listado-corte" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <Link to="listado-corte" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:px-4">
             <FileSpreadsheet className="h-4 w-4" />
             Listado de corte
           </Link>
@@ -153,12 +153,12 @@ export default function DetalleClienteView() {
       ) : (
         state && (
           <>
-            <div className={`mb-8 rounded-2xl p-6 text-white ${enMora ? 'bg-rose-700' : 'bg-slate-950'}`}>
+            <div className={`mb-8 rounded-2xl p-4 text-white sm:p-6 ${enMora ? 'bg-rose-700' : 'bg-slate-950'}`}>
               <p className="flex items-center gap-1.5 text-sm text-white/70">
                 Total exigible
                 <HelpTip text={HELP.totalExigible} />
               </p>
-              <p className="mt-2 text-4xl font-black tabular-nums">{formatCurrency(state.totalExigible, moneda)}</p>
+              <p className="mt-2 break-words text-3xl font-black tabular-nums sm:text-4xl">{formatCurrency(state.totalExigible, moneda)}</p>
               <p className="mt-3 flex items-center gap-1.5 text-sm text-white/70">
                 Corte del ciclo: {formatDate(state.fechaCorte)}
                 <HelpTip text={HELP.fechaCorte} />
@@ -248,7 +248,7 @@ export default function DetalleClienteView() {
 }
 function BackLink() {
   return (
-    <Link to="/admin/clientes" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
+    <Link to="/admin/clientes" className="mb-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-500">
       <ArrowLeft className="h-4 w-4" />
       Volver a clientes
     </Link>

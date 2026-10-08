@@ -85,7 +85,7 @@ export default function AyudaView() {
       <PageHeader eyebrow="Ayuda" title="Glosario financiero" subtitle="Conceptos que usa Finvex para calcular tus créditos." />
       <div className="relative mb-6 max-w-sm">
         <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar término" className="w-full rounded-xl border bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-indigo-500" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar término" aria-label="Buscar en el glosario" className="min-h-11 w-full rounded-xl border bg-white py-2.5 pl-10 pr-3 text-base outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 sm:text-sm" />
       </div>
       <Card>
         <dl className="divide-y">
